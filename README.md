@@ -11,7 +11,7 @@ Zig compiler version 0.13.0 is needed to compile.
 
 #### For production build:
 
-`zig build release=fast`
+`zig build --release=fast`
 
 #### For debug build(default):
 
