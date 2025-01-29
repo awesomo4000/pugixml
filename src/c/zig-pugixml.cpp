@@ -1,11 +1,11 @@
 #include "zig-pugixml.h"
+#include "pugixml.hpp"
 #include <iostream>
 #include <cstring>
-#include <pugixml/pugixml.hpp>
 
-// C interface to the pugixml C++ library. It wraps the
-// pugi C++ objects in structs to allow C calls to C++ using the
-// wrapped objects.
+
+// C interface to the pugixml C++ library. These structs wrap 
+// the pugi C++ objects in structs to allow C calls to C++ 
 
 struct xml_parse_result { pugi::xml_parse_result* obj; };
 struct xml_document     { pugi::xml_document*     obj; };
