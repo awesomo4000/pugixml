@@ -1,33 +1,32 @@
 const std = @import("std");
 const Build = std.Build;
-const StaticLibraryOptions = Build.StaticLibraryOptions;
+const StaticLibOptions = Build.StaticLibraryOptions;
 const Compile = Build.Step.Compile;
 
 pub fn build_pugixml_cpplib(
     b: *Build,
-    options: *StaticLibraryOptions,
+    options: *StaticLibOptions,
 ) *Compile {
     options.name = "pugixml_cpp";
     defer options.name = undefined;
-    const upstream = b.dependency(
-        "pugixml",
-        .{},
+    options.link_libc = false;
+    const pugixml_cpplib = b.addStaticLibrary(
+        options.*,
     );
-    const pugixml_cpp = b.addStaticLibrary(options.*);
-    pugixml_cpp.addIncludePath(upstream.path("src"));
-    pugixml_cpp.installHeader(
-        upstream.path("src/pugixml.hpp"),
-        "pugixml/pugixml.hpp",
+    pugixml_cpplib.installHeadersDirectory(
+        b.path("src/c"),
+        "",
+        .{
+            .include_extensions = &.{
+                ".h",
+                ".c",
+                ".cpp",
+                ".hpp",
+            },
+        },
     );
-    pugixml_cpp.installHeader(upstream.path(
-        "src/pugiconfig.hpp",
-    ), "pugixml/pugiconfig.hpp");
-    pugixml_cpp.installHeader(
-        upstream.path("src/pugixml.cpp"),
-        "pugixml/pugixml.cpp",
-    );
-    pugixml_cpp.addCSourceFiles(.{
-        .root = upstream.path("src"),
+    pugixml_cpplib.addCSourceFiles(.{
+        .root = b.path("src/c"),
         .files = &.{"pugixml.cpp"},
         .flags = &.{
             "-DPUGIXML_COMPACT",
@@ -37,14 +36,18 @@ pub fn build_pugixml_cpplib(
             "-DPUGIXML_MEMORY_PAGE_SIZE=131072",
         },
     });
-    pugixml_cpp.linkLibCpp();
-    b.installArtifact(pugixml_cpp);
-    return pugixml_cpp; // pugixml_cpp static library
+    pugixml_cpplib.linkLibCpp();
+    b.installArtifact(pugixml_cpplib);
+    return pugixml_cpplib; // pugixml_cpp static library
 }
 
 pub fn build(b: *std.Build) !void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(
+        .{},
+    );
+    const optimize = b.standardOptimizeOption(
+        .{},
+    );
 
     const strip = b.option(
         bool,
@@ -63,7 +66,7 @@ pub fn build(b: *std.Build) !void {
         "Skip tests that do not match any filter",
     ) orelse &[0][]const u8{};
 
-    var options: StaticLibraryOptions = .{
+    var options: StaticLibOptions = .{
         .name = undefined,
         .target = target,
         .optimize = optimize,
@@ -85,25 +88,31 @@ pub fn build(b: *std.Build) !void {
     //
 
     const pugixml_zig_module = b.addModule(
-        "zig-pugixml",
+        "pugixml",
         .{
             .root_source_file = b.path(
                 "src/pugixml.zig",
             ),
         },
     );
-    pugixml_zig_module.addIncludePath(b.path("src"));
+    pugixml_zig_module.addCSourceFile(
+        .{ .file = b.path("src/c/zig-pugixml.cpp") },
+    );
+    // pugixml_zig_module.addIncludePath(b.path("src"));
     // pugixml_zig_module.addSystemIncludePath(b.path("src"));
+
     // link against pugixml c++ library
     pugixml_zig_module.linkLibrary(pugixml_cpplib);
+
     // the C interface to the pugixml.cpp code
-    pugixml_zig_module.addCSourceFiles(.{
-        .root = b.path("src"),
-        .files = &.{
-            "zig-pugixml.cpp",
-        },
-        .flags = &.{},
-    });
+    // pugixml_zig_module.addCSourceFiles(.{
+    //     .root = b.path("src"),
+    //     .files = &.{
+    //         "zig-pugixml.cpp",
+    //     },
+    //     .flags = &.{},
+    // });
+
     //
     // "parse-xml" Executable
     //
@@ -191,25 +200,35 @@ fn createTgz(b: *std.Build) *std.Build.Step.Run {
         "-C",
         "..",
         "-cf",
-        "zig-pugixml.tar",
-        "zig-pugixml/build.zig",
-        "zig-pugixml/build.zig.zon",
-        "zig-pugixml/README.md",
-        "zig-pugixml/src/pugixml.zig",
-        "zig-pugixml/src/zig-pugixml.cpp",
-        "zig-pugixml/src/zig-pugixml.h",
-        "zig-pugixml/src/main.zig",
-        "zig-pugixml/src/tests.zig",
-        "zig-pugixml/test-files/books.xml",
+        "pugixml.tar",
+        "pugixml/src/c/pugiconfig.hpp",
+        "pugixml/src/c/pugixml.cpp",
+        "pugixml/src/c/pugixml.hpp",
+        "pugixml/src/c/zig-pugixml.cpp",
+        "pugixml/src/c/zig-pugixml.h",
+        "pugixml/src/main.zig",
+        "pugixml/src/pugixml.zig",
+        "pugixml/src/tests.zig",
     });
+
     tarRun.has_side_effects = true;
-    const gzipRun = b.addSystemCommand(&.{ "gzip", "zig-pugixml.tar" });
+    const gzipRun = b.addSystemCommand(&.{
+        "gzip",
+        "pugixml.tar",
+    });
+
     gzipRun.has_side_effects = true;
     gzipRun.step.dependOn(&tarRun.step);
+
     const renameTarGzRun = b.addSystemCommand(
-        &.{ "mv", "zig-pugixml.tar.gz", "zig-pugixml.tgz" },
+        &.{
+            "mv",
+            "pugixml.tar.gz",
+            "zig-pugixml.tgz",
+        },
     );
     renameTarGzRun.has_side_effects = true;
     renameTarGzRun.step.dependOn(&gzipRun.step);
+
     return renameTarGzRun;
 }
