@@ -78,6 +78,7 @@ pub fn build(b: *std.Build) !void {
     //
     // pugixml c++ static library
     //
+
     const pugixml_cpplib = build_pugixml_cpplib(
         b,
         &options,
@@ -98,20 +99,9 @@ pub fn build(b: *std.Build) !void {
     pugixml_zig_module.addCSourceFile(
         .{ .file = b.path("src/c/zig-pugixml.cpp") },
     );
-    // pugixml_zig_module.addIncludePath(b.path("src"));
-    // pugixml_zig_module.addSystemIncludePath(b.path("src"));
 
     // link against pugixml c++ library
     pugixml_zig_module.linkLibrary(pugixml_cpplib);
-
-    // the C interface to the pugixml.cpp code
-    // pugixml_zig_module.addCSourceFiles(.{
-    //     .root = b.path("src"),
-    //     .files = &.{
-    //         "zig-pugixml.cpp",
-    //     },
-    //     .flags = &.{},
-    // });
 
     //
     // "parse-xml" Executable
@@ -145,8 +135,10 @@ pub fn build(b: *std.Build) !void {
     run_parse_exe_step.dependOn(&run_parse_exe.step);
     run_parse_exe_step.dependOn(b.getInstallStep());
 
-    // UNIT TESTS
+    //
+    // Test step
     // Adds "zig build test" to run unit tests
+    //
     const unit_tests = b.addTest(.{
         .root_source_file = b.path("src/tests.zig"),
         .target = target,
@@ -161,7 +153,9 @@ pub fn build(b: *std.Build) !void {
         "pugixml",
         pugixml_zig_module,
     );
-    const run_unit_tests = b.addRunArtifact(unit_tests);
+    const run_unit_tests = b.addRunArtifact(
+        unit_tests,
+    );
     // run every time
     run_unit_tests.has_side_effects = true;
     const test_step = b.step(
@@ -172,25 +166,36 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(unit_tests);
 
     //
-    // CLEAN
-    const clean_step = b.step("clean", "Clean up");
+    // clean step
+    //
+    const clean_step = b.step(
+        "clean",
+        "Clean up",
+    );
 
     clean_step.dependOn(
         &b.addRemoveDirTree(b.install_path).step,
     );
     if (@import("builtin").os.tag != .windows) {
         clean_step.dependOn(
-            &b.addRemoveDirTree(b.pathFromRoot(".zig-cache")).step,
+            &b.addRemoveDirTree(b.pathFromRoot(
+                ".zig-cache",
+            )).step,
         );
 
         clean_step.dependOn(
-            &b.addRemoveDirTree(b.pathFromRoot("zig-out")).step,
+            &b.addRemoveDirTree(b.pathFromRoot(
+                "zig-out",
+            )).step,
         );
     }
 
     // Create source gzipped tarball
     const createTgzRun = createTgz(b);
-    const runTarballStep = b.step("tarball", "Make tarball from sources");
+    const runTarballStep = b.step(
+        "tgz",
+        "Make tgz from sources",
+    );
     runTarballStep.dependOn(&createTgzRun.step);
 }
 
@@ -209,6 +214,11 @@ fn createTgz(b: *std.Build) *std.Build.Step.Run {
         "pugixml/src/main.zig",
         "pugixml/src/pugixml.zig",
         "pugixml/src/tests.zig",
+        "pugixml/README.md",
+        "pugixml/build.zig",
+        "pugixml/build.zig.zon",
+        "pugixml/.zig-version",
+        "pugixml/.gitignore",
     });
 
     tarRun.has_side_effects = true;
@@ -224,7 +234,7 @@ fn createTgz(b: *std.Build) *std.Build.Step.Run {
         &.{
             "mv",
             "pugixml.tar.gz",
-            "zig-pugixml.tgz",
+            "pugixml.tgz",
         },
     );
     renameTarGzRun.has_side_effects = true;
