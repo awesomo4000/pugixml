@@ -68,7 +68,7 @@ pub fn main() !void {
     //const description = "--foo--"; // result.description
 
     std.debug.print(
-        "{s}: {s}. Elapsed time: {d:.3}ms.\n",
+        "{s}: {s}.\nElapsed time: {d:.3}ms.\n",
         .{ args[1], result.description, millis },
     );
     // doc.walkTree();
