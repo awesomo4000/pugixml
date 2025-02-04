@@ -63,6 +63,13 @@ void free_xml_text(xml_text_t text) {
     delete text;
 }
 
+xml_node_t doc_to_node(xml_doc_t doc) {
+    pugi::xml_node *docObj = doc->obj;
+    return new xml_node({
+        .obj = docObj
+    });
+}
+
 xml_result_t load_string(xml_doc_t document, const char* source)
 {
     pugi::xml_document* doc_obj = document->obj;
@@ -131,10 +138,11 @@ xml_result_t load_buffer_inplace(xml_doc_t document,
     return c_result;
 }
 
-void doc_to_stdout(xml_doc_t document) {
+void doc_to_stderr(xml_doc_t document) {
     pugi::xml_document* doc_obj = document->obj;
-    doc_obj->save(std::cout);
-    std::cout << std::endl;
+    doc_obj->save(std::cerr, " ");
+    std::cerr << std::endl;
+    std::cerr.flush();
 }
 
 const char* get_description(xml_result_t result) {
@@ -161,6 +169,14 @@ xml_node_t get_doc_first_child(xml_doc_t doc) {
     return new xml_node(
         { 
             .obj = new pugi::xml_node(doc->obj->first_child())
+        }
+    );
+}
+
+xml_node_t get_doc_last_child(xml_doc_t doc) {
+    return new xml_node(
+        { 
+            .obj = new pugi::xml_node(doc->obj->last_child())
         }
     );
 }
@@ -317,6 +333,44 @@ bool remove_child_by_name(xml_node_t node, const char *name) {
 
 bool remove_children(xml_node_t node) {
     return node->obj->remove_children();
+}
+
+xml_node_t append_child (xml_node_t node, const char* name) {
+    return new xml_node {
+        .obj = new pugi::xml_node(
+            node->obj->append_child(name)
+        )
+    };
+}
+
+xml_node_t prepend_child (xml_node_t node, const char* name) {
+    return new xml_node {
+        .obj = new pugi::xml_node(
+            node->obj->prepend_child(name)
+        )
+    };
+}
+
+xml_node_t insert_child_after (xml_node_t node, 
+                               const char* name, 
+                               xml_node_t where) {
+    const pugi::xml_node &where_obj = *(where->obj);
+    return new xml_node {
+        .obj = new pugi::xml_node(
+            node->obj->insert_child_after(name, where_obj)
+        )
+    };
+}
+
+xml_node_t insert_child_before (xml_node_t node,
+                                const char* name,
+                                xml_node_t where) {
+    const pugi::xml_node &where_obj = *(where->obj);
+    return new xml_node {
+        .obj = new pugi::xml_node(
+            node->obj->insert_child_before(name, where_obj)
+        )
+    };
 }
 
 const char* get_child_value(xml_node_t node) {
