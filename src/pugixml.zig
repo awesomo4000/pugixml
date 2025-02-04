@@ -183,8 +183,14 @@ pub const Attribute = struct {
     }
 };
 
+// const NodeOrDoc = union {
+//     c_node: ?*c.xml_node,
+//     doc: ?*c.xml_document,
+// };
+
 pub const Node = struct {
     c_node: ?*c.xml_node,
+    //c_node: NodeOrDoc,
 
     const Self = @This();
 
@@ -373,8 +379,16 @@ pub const Node = struct {
         const c_attr = switch (where) {
             .append => c.append_attr(self.c_node, attrName),
             .prepend => c.prepend_attr(self.c_node, attrName),
-            .after => c.insert_attr_after(self.c_node, attrName, where.after.c_attr),
-            .before => c.insert_attr_before(self.c_node, attrName, where.before.c_attr),
+            .after => c.insert_attr_after(
+                self.c_node,
+                attrName,
+                where.after.c_attr,
+            ),
+            .before => c.insert_attr_before(
+                self.c_node,
+                attrName,
+                where.before.c_attr,
+            ),
         };
         return Attribute{ .c_attr = c_attr };
     }
@@ -387,6 +401,36 @@ pub const Node = struct {
             self.c_node,
             attrName,
         ) };
+    }
+
+    const Placement = union(enum) {
+        append: void,
+        prepend: void,
+        after: Node,
+        before: Node,
+    };
+
+    pub fn add(
+        self: *const Self,
+        childName: [:0]const u8,
+        where: Placement,
+    ) Node {
+        const c_node = switch (where) {
+            .append => c.append_child(self.c_node, childName),
+            .prepend => c.prepend_child(self.c_node, childName),
+            .after => c.insert_child_after(
+                self.c_node,
+                childName,
+                where.after.c_node,
+            ),
+            .before => c.insert_child_before(
+                self.c_node,
+                childName,
+                where.before.c_node,
+            ),
+        };
+
+        return Node{ .c_node = c_node };
     }
 
     pub fn deinit(self: *Self) void {
@@ -558,6 +602,11 @@ pub const Doc = struct {
         return Node{ .c_node = c_node };
     }
 
+    pub fn lastChild(self: *const Self) Node {
+        const c_node = c.get_doc_last_child(self.c_doc);
+        return Node{ .c_node = c_node };
+    }
+
     pub fn child(self: *Self, name: [:0]const u8) Node {
         const c_node = c.get_doc_child_named(
             self.c_doc,
@@ -572,11 +621,22 @@ pub const Doc = struct {
         };
     }
 
-    pub fn toStdout(self: *const Self) !void {
+    pub fn addChild(
+        self: *const Self,
+        name: [:0]const u8,
+        where: Node.Placement,
+    ) Node {
+        const docNode = Node{
+            .c_node = c.doc_to_node(self.c_doc),
+        };
+        return docNode.add(name, where);
+    }
+
+    pub fn toStderr(self: *const Self) !void {
         if (!(self.parseResult.?.isOk())) {
             return XmlError.NoParseResult;
         }
-        c.doc_to_stdout(self.c_doc);
+        c.doc_to_stderr(self.c_doc);
     }
 
     pub fn walkTree(self: *const Self) void {

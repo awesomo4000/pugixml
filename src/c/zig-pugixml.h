@@ -29,20 +29,22 @@ void         free_xml_parse_result (xml_result_t result);
 void         free_xml_node         (xml_node_t node);
 void         free_xml_attr         (xml_attr_t attr);
 void         free_xml_text         (xml_text_t text);
-xml_result_t load_buffer           (xml_doc_t doc, const char* source,
-                                    size_t size);
+xml_node_t   doc_to_node           (xml_doc_t doc);
+xml_result_t load_buffer           (xml_doc_t doc, const char* source, 
+                                                          size_t size);
 xml_result_t load_buffer_fragment  (xml_doc_t doc, const char* source,
-                                    size_t size);
+                                                          size_t size);
 xml_result_t load_buffer_inplace   (xml_doc_t doc, void* source,
-                                    size_t size);
+                                                          size_t size);
 xml_result_t load_string           (xml_doc_t doc, const char* source);
 xml_result_t load_file             (xml_doc_t doc, const char* path);
-void         doc_to_stdout         (xml_doc_t doc);
+void         doc_to_stderr         (xml_doc_t doc);
 int          get_status            (xml_result_t result);
 size_t       get_offset            (xml_result_t result);
 const char*  get_description       (xml_result_t result);
 xml_node_t   get_doc_child_named   (xml_doc_t  doc, const char* name);
 xml_node_t   get_doc_first_child   (xml_doc_t doc);
+xml_node_t   get_doc_last_child    (xml_doc_t doc);
 xml_node_t   get_child_named       (xml_node_t node, const char* name);
 xml_node_t   get_first_child       (xml_node_t node);
 xml_node_t   get_last_child        (xml_node_t node);
@@ -71,10 +73,18 @@ bool         remove_attrs          (xml_node_t node);
 bool         remove_child          (xml_node_t parent, xml_node_t child);
 bool         remove_child_by_name  (xml_node_t, const char* name);
 bool         remove_children       (xml_node_t node);
+xml_node_t   append_child          (xml_node_t node, const char* name);
+xml_node_t   prepend_child         (xml_node_t node, const char* name);
+xml_node_t   insert_child_after    (xml_node_t node, const char* name,
+                                                     xml_node_t where);
+xml_node_t   insert_child_before   (xml_node_t node, const char* name,
+                                                     xml_node_t where);
 xml_attr_t   append_attr           (xml_node_t node, const char* name);
 xml_attr_t   prepend_attr          (xml_node_t node, const char* name);
-xml_attr_t   insert_attr_after     (xml_node_t node, const char* name, xml_attr_t attr);
-xml_attr_t   insert_attr_before    (xml_node_t node, const char* name, xml_attr_t attr);
+xml_attr_t   insert_attr_after     (xml_node_t node, const char* name,
+                                                      xml_attr_t attr);
+xml_attr_t   insert_attr_before    (xml_node_t node, const char* name,
+                                                      xml_attr_t attr);
 const char*  get_text_as_string    (xml_text_t text);
 bool         get_text_as_bool      (xml_text_t text);
 int          get_text_as_int       (xml_text_t text);
@@ -83,8 +93,6 @@ bool         text_is_empty         (xml_text_t text);
 // void         walk_tree             (xml_doc_t doc);
 bool         node_set_name         (xml_node_t node, const char* name);
 bool         node_set_value        (xml_node_t node, const char* value);
-
-
 
 #ifdef __cplusplus
 }

@@ -564,19 +564,98 @@ test "addAttribute .append" {
     try expect(result.isOk());
 
     const node1 = doc.child("Node1");
-    const new_attr1 = node1.addAttribute("new_attribute", .append);
-    std.debug.print(
-        "new_attr = {Attribute}\n",
-        .{new_attr1},
+    const new_attr1 = node1.addAttribute(
+        "new_attribute",
+        .append,
     );
-    const new_attr2 = node1.lastAttribute();
-    std.debug.print(
-        "new_attr = {Attribute}\n",
-        .{new_attr2},
-    );
+    // std.debug.print(
+    //     "new_attr = {Attribute}\n",
+    //     .{new_attr1},
+    // );
+    // const new_attr2 = node1.lastAttribute();
+    // std.debug.print(
+    //     "new_attr = {Attribute}\n",
+    //     .{new_attr2},
+    // );
 
     try expectEqualStrings(
         "new_attribute",
         node1.lastAttribute().name(),
     );
+    try expect(new_attr1.eql(node1.lastAttribute()));
+}
+
+test "addChild .append, .prepend" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Begin><stuff>hello</stuff></Begin>
+        \\<End></End>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+
+    // append
+    const final = doc.addChild(
+        "Final",
+        .append,
+    );
+    try expect(final.eql(doc.lastChild()));
+
+    try expectEqualStrings(
+        "Final",
+        doc.lastChild().name(),
+    );
+
+    // prepend
+    const start = doc.addChild(
+        "Start",
+        .prepend,
+    );
+
+    try expect(start.eql(doc.firstChild()));
+    try expectEqualStrings(
+        "Start",
+        start.name(),
+    );
+
+    // add after an existing node
+
+    const second = doc.child("Begin");
+    const upperMiddle = doc.addChild(
+        "UpperMiddle",
+        .{ .after = second },
+    );
+    try expect(
+        doc.child(
+            "Begin",
+        ).nextSibling().eql(
+            upperMiddle,
+        ),
+    );
+
+    // add before an existing node
+    const lowerMiddle = doc.addChild(
+        "LowerMiddle",
+        .{
+            .before = doc.child("End"),
+        },
+    );
+    try expect(
+        doc.child(
+            "End",
+        ).previousSibling().eql(
+            lowerMiddle,
+        ),
+    );
+    try doc.toStderr();
+
+    // At the end of this testing, the XML is:
+    // <?xml version="1.0"?>
+    // <Start />
+    // <Begin />
+    // <UpperMiddle />
+    // <LowerMiddle />
+    // <End />
+    // <Final />
 }
