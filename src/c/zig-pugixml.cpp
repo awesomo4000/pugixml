@@ -131,6 +131,12 @@ xml_result_t load_buffer_inplace(xml_doc_t document,
     return c_result;
 }
 
+void doc_to_stdout(xml_doc_t document) {
+    pugi::xml_document* doc_obj = document->obj;
+    doc_obj->save(std::cout);
+    std::cout << std::endl;
+}
+
 const char* get_description(xml_result_t result) {
     return result->obj->description();
 }
@@ -199,6 +205,14 @@ xml_node_t get_next_sibling(xml_node_t node) {
     );
  }
 
+xml_node_t get_previous_sibling(xml_node_t node) {
+     return new xml_node(
+        {
+            .obj = new pugi::xml_node(node->obj->previous_sibling())
+        }
+    );
+ }
+
 xml_text_t get_node_text(xml_node_t  node) {
     return new xml_text(
         {
@@ -207,12 +221,34 @@ xml_text_t get_node_text(xml_node_t  node) {
     );
 }
 
+bool nodes_eql(xml_node_t a, xml_node_t b) {
+    // pugixml hash_value equality means the objects are at the 
+    // same location in the document. Does not compare underlying
+    // data to test two nodes for equality.
+    if ((a->obj->hash_value()) == (b->obj->hash_value())) {
+        return true;
+    } else {
+        return false; 
+    }
+
+}
+
+
+bool attrs_eql(xml_attr_t a, xml_attr_t b) {
+    // pugixml hash_value equality means the objects are at the 
+    // same location in the document. Does not compare underlying
+    // data to test two nodes for equality.
+    if ((a->obj->hash_value()) == (b->obj->hash_value())) {
+        return true;
+    } else {
+        return false; 
+    }
+}
+
 xml_attr_t get_first_attr(xml_node_t node) {
     return new xml_attribute(
         {
-            .obj = new pugi::xml_attribute(
-                node->obj->first_attribute()
-            )
+            .obj = new pugi::xml_attribute(node->obj->first_attribute())
         }
     );
 }
@@ -220,9 +256,7 @@ xml_attr_t get_first_attr(xml_node_t node) {
 xml_attr_t get_last_attr(xml_node_t node) {
     return new xml_attribute(
         {
-            .obj = new pugi::xml_attribute(
-                node->obj->last_attribute()
-            )
+            .obj = new pugi::xml_attribute(node->obj->last_attribute())
         }
     );
 }
@@ -230,9 +264,7 @@ xml_attr_t get_last_attr(xml_node_t node) {
 xml_attr_t get_next_attr(xml_attr_t attr) {
     return new xml_attribute(
         {
-            .obj = new pugi::xml_attribute(
-                attr->obj->next_attribute()
-            )
+            .obj = new pugi::xml_attribute(attr->obj->next_attribute())
         }
     );
 }
@@ -240,9 +272,7 @@ xml_attr_t get_next_attr(xml_attr_t attr) {
 xml_attr_t get_previous_attr(xml_attr_t attr) {
     return new xml_attribute(
         {
-            .obj = new pugi::xml_attribute(
-                attr->obj->previous_attribute()
-            )
+            .obj = new pugi::xml_attribute(attr->obj->previous_attribute())
         }
     );
 }
@@ -260,6 +290,35 @@ const char* get_attr_name(xml_attr_t attr) {
     return attr->obj->name();
 }
 
+bool remove_attr(xml_node_t node, xml_attr_t attr) {
+    const pugi::xml_attribute &attr_obj = *(attr->obj);
+    bool result = node->obj->remove_attribute(attr_obj);
+    return result;
+}
+
+bool remove_attr_by_name(xml_node_t node, const char* name) {
+    pugi::xml_attribute attr = node->obj->attribute(name);
+    return node->obj->remove_attribute(attr);
+}
+
+bool remove_attrs(xml_node_t node) {
+    return node->obj->remove_attributes();
+}
+
+bool remove_child(xml_node_t node, xml_node_t child) {
+    const pugi::xml_node &child_obj = *(child->obj);
+    bool result = node->obj->remove_child(child_obj);
+    return result;
+}
+
+bool remove_child_by_name(xml_node_t node, const char *name) {
+    return node->obj->remove_child(name);
+}
+
+bool remove_children(xml_node_t node) {
+    return node->obj->remove_children();
+}
+
 const char* get_child_value(xml_node_t node) {
     return node->obj->child_value();
 }
@@ -267,15 +326,21 @@ const char* get_child_value(xml_node_t node) {
 xml_attr_t get_attr_by_name(xml_node_t node, const char* name) {
     return new xml_attribute(
         {
-            .obj = new pugi::xml_attribute(
-                node->obj->attribute(name)
-            )
+            .obj = new pugi::xml_attribute(node->obj->attribute(name))
         }
     );
 }
 
 const char* get_attr_value(xml_attr_t attr) { 
         return attr->obj->value(); 
+}
+
+bool attr_set_name(xml_attr_t attr, const char* name) {
+    return attr->obj->set_name(name);
+}
+
+bool attr_set_value(xml_attr_t attr, const char* value) {
+    return attr->obj->set_value(value);
 }
 
 const char* get_text_as_string(xml_text_t text) { 
@@ -299,6 +364,16 @@ xml_node_t get_text_data(xml_text_t text) {
 
 bool node_is_empty(xml_node_t node) {
     pugi::xml_node obj = *(node->obj);
+
+    if (!obj) {
+        return true;
+    }
+
+    if ((obj.type() == pugi::xml_node_type::node_element)
+        &&  (obj.name() == "")) {
+        return true;
+    }
+
     if (obj) {
         return false;
     } else {
@@ -311,10 +386,42 @@ bool node_set_name(xml_node_t node, const char* name) {
 }
 
 bool node_set_value(xml_node_t node, const char* value) {
-    printf("SetValue: %s\n", value);
     return node->obj->set_value(value);
 }
 
+xml_attr_t append_attr(xml_node_t node, const char* name) {
+    return new xml_attribute {
+        .obj = new pugi::xml_attribute(
+            node->obj->append_attribute(name)
+        )
+    };
+}
+
+xml_attr_t prepend_attr(xml_node_t node, const char* name) {
+    return new xml_attribute {
+        .obj = new pugi::xml_attribute(
+            node->obj->prepend_attribute(name)
+        )
+    };
+}
+
+xml_attr_t insert_attr_after(xml_node_t node, const char* name, xml_attr_t attr) {
+    const pugi::xml_attribute &attr_obj = *(attr->obj);
+    return new xml_attribute {
+        .obj = new pugi::xml_attribute(
+            node->obj->insert_attribute_after(name, attr_obj)
+        )
+    };
+}
+
+xml_attr_t insert_attr_before(xml_node_t node, const char* name, xml_attr_t attr) {
+    const pugi::xml_attribute &attr_obj = *(attr->obj);
+    return new xml_attribute {
+        .obj = new pugi::xml_attribute(
+            node->obj->insert_attribute_before(name, attr_obj)
+        )
+    };
+}
 
 bool text_is_empty(xml_text_t text) {
     pugi::xml_text obj = *(text->obj);

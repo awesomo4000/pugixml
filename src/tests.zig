@@ -211,6 +211,27 @@ test "check some error cases" {
     }
 }
 
+test "First and last attribute" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\<Child1 childAttr="child 1" childAttr2="child 2" />
+        \\</Node1>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    const node1 = doc.firstChild();
+
+    const n1first = node1.firstAttribute();
+    try expectEqualStrings("attr1", n1first.name());
+    try expectEqualStrings("attr 1", n1first.value());
+
+    const n1last = node1.lastAttribute();
+    try expectEqualStrings("attr3", n1last.name());
+    try expectEqualStrings("attr 3", n1last.value());
+}
+
 test "Attribute iterator" {
     const xml =
         \\<?xml version="1.0" encoding="UTF-8" ?>
@@ -288,6 +309,52 @@ test "test doc childiter / Nodeiterator" {
     }
 }
 
+test "doc load buffer fragment and check type" {
+    var doc = pugixml.Doc.init();
+    const result = doc.loadBufferFragment("foobar<node/>");
+    //std.debug.print("result = {ParseResult}\n", .{result});
+    try expect(result.status == pugixml.ParseStatus.ok);
+    const first = doc.firstChild();
+    const t = first.getType();
+    try expect(t == pugixml.NodeType.node_pcdata);
+    //std.debug.print("first type = {}\n", .{t});
+    const second = first.nextSibling();
+    try expect(second.getType() == pugixml.NodeType.node_element);
+    //std.debug.print("second type = {}", .{second.getType()});
+}
+
+test "next and previous siblings" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 /><Node2></Node2><Node3 />
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    const node1 = doc.child("Node1");
+    const node2 = node1.nextSibling();
+    try expectEqualStrings("Node2", node2.name());
+    const node3 = node2.nextSibling();
+    try expectEqualStrings("Node2", node3.previousSibling().name());
+}
+
+test "text.isEmpty()" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<NodeWithText>Here is the text</NodeWithText>
+        \\<NodeWithEmptyText></NodeWithEmptyText>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    const node1 = doc.firstChild();
+    const n1txt = node1.text();
+    try expect(n1txt.isEmpty() == false);
+    const node2 = doc.child("NodeWithEmptyText");
+    try expect(node2.isEmpty() == false);
+    try expect(node2.text().isEmpty() == true);
+}
+
 test "set node name and node value" {
     const xml =
         \\<?xml version="1.0" encoding="UTF-8" ?>
@@ -302,6 +369,7 @@ test "set node name and node value" {
     var node1 = doc.child("Node1");
     const setNameResult = node1.setName("NewName1");
     try expect(setNameResult == true);
+
     try expectEqualStrings(
         "NewName1",
         node1.name(),
@@ -331,16 +399,184 @@ test "set node name and node value" {
     );
 }
 
-test "doc load buffer fragment and check type" {
+test "remove attribute" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\</Node1>
+    ;
     var doc = pugixml.Doc.init();
-    const result = doc.loadBufferFragment("foobar<node/>");
-    //std.debug.print("result = {ParseResult}\n", .{result});
-    try expect(result.status == pugixml.ParseStatus.ok);
-    const first = doc.firstChild();
-    const t = first.getType();
-    try expect(t == pugixml.NodeType.node_pcdata);
-    //std.debug.print("first type = {}\n", .{t});
-    const second = first.nextSibling();
-    try expect(second.getType() == pugixml.NodeType.node_element);
-    //std.debug.print("second type = {}", .{second.getType()});
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    var node1 = doc.child("Node1");
+    try expect(!(node1.isEmpty()));
+    const attr1 = node1.attribute("attr1");
+    try expectEqualStrings("attr 1", attr1.value());
+    const removeResult = node1.removeAttribute(attr1);
+    //std.debug.print("removeResult = {}", .{removeResult});
+    try expect(removeResult == true);
+    node1 = doc.child("Node1");
+    try expectEqualStrings(
+        "attr2",
+        node1.firstAttribute().name(),
+    );
+    try expectEqualStrings(
+        "attr 2",
+        node1.firstAttribute().value(),
+    );
+    try expect(node1.removeAttribute(node1.attribute("FOO")) == false);
+}
+
+test "remove attributes" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\</Node1>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    const node1 = doc.child("Node1");
+    try expect(!(node1.isEmpty()));
+    const res = node1.removeAttributes();
+    try expect(res == true);
+    try expect(node1.firstAttribute().isEmpty() == true);
+    try expect(node1.attribute("attr2").isEmpty() == true);
+    try expect(node1.lastAttribute().isEmpty() == true);
+}
+
+test "node remove child" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="node1 attr 1" attr2="node1 attr 2"
+        \\ attr3="node1 attr 3">
+        \\ text node string
+        \\<Child1 childAttr="child 1 attr1" childAttr2="child1 attr2" />
+        \\<Child2 childAttr="child 2 attr1" childAttr2="child2 attr2" />
+        \\</Node1>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    var node1 = doc.child("Node1");
+    const child1 = node1.child("Child1");
+    try expect(!node1.isEmpty());
+    try expect(!child1.isEmpty());
+    const res = node1.remove(.{ .child = child1 });
+    try expect(res == true);
+    try expect(node1.child("Child1").isEmpty());
+}
+
+test "node remove child with name" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\ text node string
+        \\<Child1 childAttr="child 1" childAttr2="child 2" />
+        \\</Node1>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    var node1 = doc.child("Node1");
+    try expect(!node1.isEmpty());
+    const res = node1.remove(.{ .name = "Child1" });
+    try expect(res == true);
+    try expect(!node1.isEmpty());
+    const child = node1.child("Child1");
+    try expect(child.isEmpty());
+    try expectEqualStrings(
+        "\n text node string\n",
+        node1.firstChild().text().asString(),
+    );
+    // std.debug.print("Child = {Node} empty={}", .{
+    //     child,
+    //     child.isEmpty(),
+    // });
+}
+
+test "set attr name & value" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\</Node1>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    var node1 = doc.child("Node1");
+    try expect(!node1.isEmpty());
+    const attr1 = node1.attribute("attr1");
+    var res = attr1.setValue("new value");
+    try expect(res == true);
+    try expectEqualStrings("new value", attr1.value());
+
+    const attr2 = node1.attribute("attr2");
+    res = attr2.setName("attr99");
+    try expect(res == true);
+    try expectEqualStrings("attr99", attr2.name());
+}
+
+test "append attribute" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\</Node1>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+
+    const node1 = doc.child("Node1");
+    const new_attr1 = node1.appendAttribute(
+        "new_attribute",
+    );
+    // std.debug.print(
+    //     "new_attr = {Attribute}\n",
+    //     .{new_attr1},
+    // );
+    const new_attr2 = node1.lastAttribute();
+    // std.debug.print(
+    //     "new_attr = {Attribute}\n",
+    //     .{new_attr2},
+    // );
+
+    try expectEqualStrings(
+        "new_attribute",
+        new_attr2.name(),
+    );
+    try expectEqualStrings(
+        "new_attribute",
+        new_attr1.name(),
+    );
+    try expect(new_attr1.eql(new_attr2));
+    try expect(pugixml.Attribute.eql(new_attr1, new_attr2));
+}
+
+test "addAttribute .append" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\</Node1>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+
+    const node1 = doc.child("Node1");
+    const new_attr1 = node1.addAttribute("new_attribute", .append);
+    std.debug.print(
+        "new_attr = {Attribute}\n",
+        .{new_attr1},
+    );
+    const new_attr2 = node1.lastAttribute();
+    std.debug.print(
+        "new_attr = {Attribute}\n",
+        .{new_attr2},
+    );
+
+    try expectEqualStrings(
+        "new_attribute",
+        node1.lastAttribute().name(),
+    );
 }
