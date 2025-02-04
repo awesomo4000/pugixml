@@ -39,6 +39,10 @@ pub const ParseStatus = enum(u32) {
     no_document_element, // Document had no element nodes
 };
 
+const XmlError = error{
+    NoParseResult,
+};
+
 const ParseResult = struct {
     status: ParseStatus,
     description: [*:0]const u8,
@@ -46,7 +50,9 @@ const ParseResult = struct {
 
     const Self = @This();
 
-    pub fn initWith_C_Result(result: ?*c.xml_parse_result) ParseResult {
+    pub fn initWith_C_Result(
+        result: ?*c.xml_parse_result,
+    ) ParseResult {
         return Self{
             .status = @enumFromInt(c.get_status(result)),
             .description = c.get_description(result),
@@ -103,11 +109,20 @@ const Text = struct {
     pub fn asBool(self: *const Self) bool {
         return c.get_text_as_bool(self.c_text);
     }
+
+    pub fn isEmpty(self: *const Self) bool {
+        return c.text_is_empty(self.c_text);
+    }
 };
 
-const Attribute = struct {
+pub const Attribute = struct {
     c_attr: ?*c.xml_attribute,
     const Self = @This();
+
+    pub fn eql(self: Self, other: Self) bool {
+        //        if ((self.c_attr == null) and (other.c_attr == null)) return true;
+        return c.attrs_eql(self.c_attr, other.c_attr);
+    }
 
     pub fn isEmpty(self: *const Self) bool {
         const res: bool = c.attr_is_empty(self.c_attr);
@@ -133,6 +148,39 @@ const Attribute = struct {
             .c_attr = c.get_previous_attr(self.c_attr),
         };
     }
+
+    pub fn setName(
+        self: *const Self,
+        attrName: [:0]const u8,
+    ) bool {
+        return c.attr_set_name(self.c_attr, attrName);
+    }
+
+    pub fn setValue(
+        self: *const Self,
+        attrValue: [:0]const u8,
+    ) bool {
+        return c.attr_set_value(self.c_attr, attrValue);
+    }
+
+    pub fn format(
+        self: *const Self,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print(
+            "{s}(name=\"{s}\",value=\"{?s}\" {?s}",
+            .{
+                @typeName(Self),
+                self.name(),
+                self.value(),
+                self.c_attr,
+            },
+        );
+    }
 };
 
 pub const Node = struct {
@@ -148,6 +196,11 @@ pub const Node = struct {
 
     pub fn initWith_C_Node(c_node: ?*c.xml_node) Self {
         return Self{ .c_node = c_node };
+    }
+
+    pub fn eql(self: Self, other: Self) bool {
+        //        if ((self.c_node == null) and (other.c_node == null)) return true;
+        return c.nodes_eql(self.c_node, other.c_node);
     }
 
     pub fn isEmpty(self: *const Self) bool {
@@ -171,6 +224,16 @@ pub const Node = struct {
         return @enumFromInt(c.get_node_type(self.c_node));
     }
 
+    pub fn attribute(
+        self: *const Self,
+        attr_name: [:0]const u8,
+    ) Attribute {
+        return Attribute{ .c_attr = c.get_attr_by_name(
+            self.c_node,
+            attr_name,
+        ) };
+    }
+
     pub fn firstAttribute(self: *const Self) Attribute {
         return Attribute{ .c_attr = c.get_first_attr(
             self.c_node,
@@ -178,12 +241,14 @@ pub const Node = struct {
     }
 
     pub fn lastAttribute(self: *const Self) Attribute {
-        return Attribute{ .c_node = c.get_last_attr(
+        return Attribute{ .c_attr = c.get_last_attr(
             self.c_node,
         ) };
     }
 
-    pub fn attributeIterator(self: *const Self) AttributeIterator {
+    pub fn attributeIterator(
+        self: *const Self,
+    ) AttributeIterator {
         return AttributeIterator{
             .first = self.firstAttribute(),
         };
@@ -194,12 +259,20 @@ pub const Node = struct {
         return Node{ .c_node = c_node };
     }
 
+    pub fn previousSibling(self: *const Self) Self {
+        const c_node = c.get_previous_sibling(self.c_node);
+        return Node{ .c_node = c_node };
+    }
+
     pub fn text(self: *const Self) Text {
         const text_node = c.get_node_text(self.c_node);
         return Text.initWith_C_Text(text_node);
     }
 
-    pub fn child(self: *const Self, child_name: [:0]const u8) Self {
+    pub fn child(
+        self: *const Self,
+        child_name: [:0]const u8,
+    ) Self {
         const c_node = c.get_child_named(
             self.c_node,
             child_name,
@@ -212,7 +285,10 @@ pub const Node = struct {
         return Node{ .c_node = c_node };
     }
 
-    pub fn setName(self: *const Self, nodeName: [:0]const u8) bool {
+    pub fn setName(
+        self: *const Self,
+        nodeName: [:0]const u8,
+    ) bool {
         return c.node_set_name(self.c_node, nodeName);
     }
 
@@ -220,12 +296,97 @@ pub const Node = struct {
         self: *const Self,
         nodeValue: [:0]const u8,
     ) Node.Error!void {
-        const result = c.node_set_value(self.c_node, nodeValue);
+        const result = c.node_set_value(
+            self.c_node,
+            nodeValue,
+        );
         if (result == false) {
             return Node.Error.WrongType;
         } else {
             return;
         }
+    }
+
+    pub fn removeAttribute(
+        self: *const Self,
+        attr: Attribute,
+    ) bool {
+        const result = c.remove_attr(
+            self.c_node,
+            attr.c_attr,
+        );
+        return result;
+    }
+
+    pub fn removeAttributes(self: *const Self) bool {
+        const result = c.remove_attrs(self.c_node);
+        return result;
+    }
+
+    const Removeable = union(enum) {
+        child: Node,
+        allChildren: void,
+        name: [:0]const u8,
+        attr: Attribute,
+        attrName: [:0]const u8,
+        allAttrs: void,
+    };
+
+    pub fn remove(
+        self: *const Self,
+        thing: Removeable,
+    ) bool {
+        return switch (thing) {
+            .child => c.remove_child(
+                self.c_node,
+                thing.child.c_node,
+            ),
+            .allChildren => c.remove_children(self.c_node),
+            .name => c.remove_child_by_name(
+                self.c_node,
+                thing.name,
+            ),
+            .attr => c.remove_attr(
+                self.c_node,
+                thing.attr.c_attr,
+            ),
+            .attrName => c.remove_attr_by_name(
+                self.c_node,
+                thing.attrName,
+            ),
+            .allAttrs => c.remove_attrs(self.c_node),
+        };
+    }
+
+    const AttributePlacement = union(enum) {
+        append: void,
+        prepend: void,
+        after: Attribute,
+        before: Attribute,
+    };
+
+    pub fn addAttribute(
+        self: *const Self,
+        attrName: [:0]const u8,
+        where: AttributePlacement,
+    ) Attribute {
+        const c_attr = switch (where) {
+            .append => c.append_attr(self.c_node, attrName),
+            .prepend => c.prepend_attr(self.c_node, attrName),
+            .after => c.insert_attr_after(self.c_node, attrName, where.after.c_attr),
+            .before => c.insert_attr_before(self.c_node, attrName, where.before.c_attr),
+        };
+        return Attribute{ .c_attr = c_attr };
+    }
+
+    pub fn appendAttribute(
+        self: *const Self,
+        attrName: [:0]const u8,
+    ) Attribute {
+        return Attribute{ .c_attr = c.append_attr(
+            self.c_node,
+            attrName,
+        ) };
     }
 
     pub fn deinit(self: *Self) void {
@@ -297,25 +458,39 @@ pub const Doc = struct {
         }
     }
 
-    pub fn contextDetail(self: *Self, source: [:0]const u8) []const u8 {
+    pub fn contextDetail(
+        self: *Self,
+        source: [:0]const u8,
+    ) []const u8 {
         // _ = source;
         if (self.parseResult == null) {
             return "no parse result";
         }
         const offset = self.parseResult.?.offset;
         const contextLen = 64;
-        const startPos = applyShift(offset, -contextLen);
-        var endPos = applyShift(offset, contextLen);
+        const startPos = applyShift(
+            offset,
+            -contextLen,
+        );
+        var endPos = applyShift(
+            offset,
+            contextLen,
+        );
         endPos = @min(endPos, source.len);
         return source[startPos..endPos];
     }
 
-    pub fn loadFile(self: *Self, path: [:0]const u8) ParseResult {
+    pub fn loadFile(
+        self: *Self,
+        path: [:0]const u8,
+    ) ParseResult {
         const c_result: ?*c.struct_xml_parse_result = c.load_file(
             self.c_doc,
             path,
         );
-        const result = ParseResult.initWith_C_Result(c_result);
+        const result = ParseResult.initWith_C_Result(
+            c_result,
+        );
         //self.parseResult = result;
         return result;
     }
@@ -325,7 +500,9 @@ pub const Doc = struct {
             self.c_doc,
             source,
         );
-        const result = ParseResult.initWith_C_Result(c_result);
+        const result = ParseResult.initWith_C_Result(
+            c_result,
+        );
         self.parseResult = result;
         return result;
     }
@@ -336,7 +513,9 @@ pub const Doc = struct {
             source.ptr,
             source.len,
         );
-        const result = ParseResult.initWith_C_Result(c_result);
+        const result = ParseResult.initWith_C_Result(
+            c_result,
+        );
         self.parseResult = result;
         return result;
     }
@@ -357,7 +536,10 @@ pub const Doc = struct {
         return result;
     }
 
-    pub fn loadBufferInplace(self: *Self, source: []u8) ParseResult {
+    pub fn loadBufferInplace(
+        self: *Self,
+        source: []u8,
+    ) ParseResult {
         const c_result =
             c.load_buffer_inplace(
             self.c_doc,
@@ -385,7 +567,16 @@ pub const Doc = struct {
     }
 
     pub fn childIterator(self: *const Self) NodeIterator {
-        return NodeIterator{ .first = self.firstChild() };
+        return NodeIterator{
+            .first = self.firstChild(),
+        };
+    }
+
+    pub fn toStdout(self: *const Self) !void {
+        if (!(self.parseResult.?.isOk())) {
+            return XmlError.NoParseResult;
+        }
+        c.doc_to_stdout(self.c_doc);
     }
 
     pub fn walkTree(self: *const Self) void {
