@@ -648,14 +648,54 @@ test "addChild .append, .prepend" {
             lowerMiddle,
         ),
     );
-    try doc.toStderr();
+    // try doc.toStderr();
 
     // At the end of this testing, the XML is:
     // <?xml version="1.0"?>
     // <Start />
-    // <Begin />
+    // <Begin>
+    //  <stuff>hello</stuff>
+    // </Begin>
     // <UpperMiddle />
     // <LowerMiddle />
     // <End />
     // <Final />
+
+}
+
+test "load invalid doc and get an error result" {
+    const xml = "<node><child>text</chil></node>";
+    var doc = pugixml.Doc.init();
+    try expectError(
+        pugixml.ParseError.EndElementMismatch,
+        doc.loadStringOrError(xml),
+    );
+    const result = doc.parseResult.?;
+
+    // std.debug.print("{ParseResult}\n", .{result});
+    // std.debug.print("{s}\n", .{doc.contextDetail(xml)});
+
+    var buf = [_:0]u8{0} ** 128;
+    const spaces = [_:0]u8{' '} ** 128;
+    _ = try std.fmt.bufPrint(
+        buf[0..],
+        "{s}\n{s}^--[{d}]",
+        .{
+            doc.contextDetail(xml),
+            spaces[1..result.offset],
+            result.offset,
+        },
+    );
+    std.debug.print("{s}", .{buf});
+    // output:
+
+    const expected =
+        \\<node><child>text</chil></node>
+        \\                  ^--[19]
+    ;
+
+    try std.testing.expectStringStartsWith(
+        buf[0..],
+        expected,
+    );
 }

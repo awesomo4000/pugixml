@@ -43,6 +43,25 @@ const XmlError = error{
     NoParseResult,
 };
 
+pub const ParseError = error{
+    FileNotFound,
+    IOError,
+    OutOfMemory,
+    InternalError,
+    UnrecognizedTag,
+    BadPI,
+    BadComment,
+    BadCData,
+    BadDocType,
+    BadPCData,
+    BadStartElement,
+    BadAttribute,
+    BadEndElement,
+    EndElementMismatch,
+    AppendInvalidRoot,
+    NoDocumentElement,
+};
+
 const ParseResult = struct {
     status: ParseStatus,
     description: [*:0]const u8,
@@ -66,6 +85,28 @@ const ParseResult = struct {
 
     pub fn isErr(self: *const Self) bool {
         return (!(self.status == ParseStatus.ok));
+    }
+
+    pub fn statusAsError(self: *const Self) ?ParseError {
+        return switch (self.status) {
+            .ok => null,
+            .file_not_found => ParseError.FileNotFound,
+            .io_error => ParseError.IOError,
+            .out_of_memory => ParseError.OutOfMemory,
+            .internal_error => ParseError.InternalError,
+            .unrecognized_tag => ParseError.UnrecognizedTag,
+            .bad_pi => ParseError.BadPI,
+            .bad_comment => ParseError.BadComment,
+            .bad_cdata => ParseError.BadCData,
+            .bad_doctype => ParseError.BadDocType,
+            .bad_pcdata => ParseError.BadPCData,
+            .bad_start_element => ParseError.BadStartElement,
+            .bad_attribute => ParseError.BadAttribute,
+            .bad_end_element => ParseError.BadEndElement,
+            .end_element_mismatch => ParseError.EndElementMismatch,
+            .append_invalid_root => ParseError.AppendInvalidRoot,
+            .no_document_element => ParseError.NoDocumentElement,
+        };
     }
 
     pub fn format(
@@ -182,11 +223,6 @@ pub const Attribute = struct {
         );
     }
 };
-
-// const NodeOrDoc = union {
-//     c_node: ?*c.xml_node,
-//     doc: ?*c.xml_document,
-// };
 
 pub const Node = struct {
     c_node: ?*c.xml_node,
@@ -539,6 +575,14 @@ pub const Doc = struct {
         return result;
     }
 
+    pub fn loadFileOrError(self: *Self, path: [:0]const u8) ParseError!void {
+        const result = self.loadFile(path);
+        if (result.isErr()) {
+            return result.statusAsError().?;
+        }
+        return;
+    }
+
     pub fn loadString(self: *Self, source: [:0]const u8) ParseResult {
         const c_result: ?*c.struct_xml_parse_result = c.load_string(
             self.c_doc,
@@ -549,6 +593,14 @@ pub const Doc = struct {
         );
         self.parseResult = result;
         return result;
+    }
+
+    pub fn loadStringOrError(self: *Self, source: [:0]const u8) ParseError!void {
+        const result = self.loadString(source);
+        if (result.isErr()) {
+            return result.statusAsError().?;
+        }
+        return;
     }
 
     pub fn loadBuffer(self: *Self, source: []const u8) ParseResult {
