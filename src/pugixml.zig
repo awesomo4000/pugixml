@@ -519,6 +519,29 @@ const AttributeIterator = struct {
     }
 };
 
+pub const ContextDetail = struct {
+    offset: usize,
+    context: []const u8,
+    contextLength: usize,
+    contextOffset: usize,
+
+    const Self = @This();
+    pub fn format(
+        self: *const Self,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+
+        try writer.print(
+            "{s}\n{s: >[3]}^--[{d}]",
+            .{ self.context, "", self.offset, self.contextOffset },
+        );
+    }
+};
+
 pub const Doc = struct {
     c_doc: ?*c.xml_document,
     parseResult: ?ParseResult,
@@ -540,24 +563,21 @@ pub const Doc = struct {
 
     pub fn contextDetail(
         self: *Self,
-        source: [:0]const u8,
-    ) []const u8 {
-        // _ = source;
-        if (self.parseResult == null) {
-            return "no parse result";
-        }
-        const offset = self.parseResult.?.offset;
-        const contextLen = 64;
-        const startPos = applyShift(
-            offset,
-            -contextLen,
-        );
-        var endPos = applyShift(
-            offset,
-            contextLen,
-        );
+        source: []const u8,
+        parseResult: ParseResult,
+        contextLength: usize,
+    ) ContextDetail {
+        _ = self;
+        const offset = parseResult.offset;
+        const startPos = offset -| contextLength;
+        var endPos = offset +| contextLength;
         endPos = @min(endPos, source.len);
-        return source[startPos..endPos];
+        return ContextDetail{
+            .offset = offset,
+            .context = source[startPos..endPos],
+            .contextLength = contextLength,
+            .contextOffset = offset - startPos,
+        };
     }
 
     pub fn loadFile(

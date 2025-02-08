@@ -671,31 +671,20 @@ test "load invalid doc and get an error result" {
         doc.loadStringOrError(xml),
     );
     const result = doc.parseResult.?;
-
-    // std.debug.print("{ParseResult}\n", .{result});
-    // std.debug.print("{s}\n", .{doc.contextDetail(xml)});
-
-    var buf = [_:0]u8{0} ** 128;
-    const spaces = [_:0]u8{' '} ** 128;
-    _ = try std.fmt.bufPrint(
-        buf[0..],
-        "{s}\n{s}^--[{d}]",
-        .{
-            doc.contextDetail(xml),
-            spaces[1..result.offset],
-            result.offset,
-        },
+    const detail = doc.contextDetail(
+        xml,
+        result,
+        64,
     );
-    std.debug.print("{s}", .{buf});
-    // output:
+    // std.debug.print("{ContextDetail}\n", .{detail});
+    var mem = [_:0]u8{0} ** 256; // This should hold contextLength*2
+    const buf = mem[0..];
+    _ = try std.fmt.bufPrint(buf, "{ContextDetail}\n", .{detail});
+    // std.debug.print("buf.len={d}\n", .{buf.len});
+    // std.debug.print("{s}\n", .{buf});
 
-    const expected =
-        \\<node><child>text</chil></node>
-        \\                  ^--[19]
-    ;
-
-    try std.testing.expectStringStartsWith(
-        buf[0..],
-        expected,
-    );
+    const expected: []const u8 =
+        "<node><child>text</chil></node>\n" ++
+        "                   ^--[19]\n";
+    try std.testing.expectEqualStrings(expected, buf[0..expected.len]);
 }
