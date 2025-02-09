@@ -689,3 +689,30 @@ test "load invalid doc and get an error result" {
         "                   ^--[19]\n";
     try std.testing.expectEqualStrings(expected, buf[0..expected.len]);
 }
+
+test "NodeIteratorNamed" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Nope>nope1</Nope>
+        \\<Good>some stuff</Good>
+        \\<Other />
+        \\<Good>more stuff</Good>
+        \\<Bad></Bad>
+        \\<Ugly></Ugly>
+        \\<Good>Keep this</Good>
+        \\<Other></Other>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadBuffer(xml);
+    try expect(result.isOk());
+    var iter = doc.childIteratorNamed("Good");
+
+    try expectEqualStrings("Good", iter.next().?.name());
+    try expectEqualStrings("Good", iter.next().?.name());
+    try expectEqualStrings("Good", iter.next().?.name());
+    try expect(iter.next() == null);
+    iter = doc.childIteratorNamed("Other");
+    try expectEqualStrings("Other", iter.next().?.name());
+    try expectEqualStrings("Other", iter.next().?.name());
+    try expect(iter.next() == null);
+}

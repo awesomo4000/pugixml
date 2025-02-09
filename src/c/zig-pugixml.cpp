@@ -221,6 +221,14 @@ xml_node_t get_next_sibling(xml_node_t node) {
     );
  }
 
+xml_node_t next_sibling_named(xml_node_t node, const char* name) {
+    return new xml_node(
+        {
+            .obj = new pugi::xml_node(node->obj->next_sibling(name))
+        }
+    );
+}
+
 xml_node_t get_previous_sibling(xml_node_t node) {
      return new xml_node(
         {
