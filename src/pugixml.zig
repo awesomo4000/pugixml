@@ -262,6 +262,10 @@ pub const Node = struct {
         ));
     }
 
+    pub fn nameZ(self: *const Self) [:0]const u8 {
+        return std.mem.span(c.get_node_name(self.c_node));
+    }
+
     pub fn getType(self: *const Self) NodeType {
         return @enumFromInt(c.get_node_type(self.c_node));
     }
@@ -298,6 +302,14 @@ pub const Node = struct {
 
     pub fn nextSibling(self: *const Self) Self {
         const c_node = c.get_next_sibling(self.c_node);
+        return Node{ .c_node = c_node };
+    }
+
+    pub fn nextSiblingNamed(self: *const Self, elementName: [:0]const u8) Self {
+        const c_node = c.next_sibling_named(
+            self.c_node,
+            elementName,
+        );
         return Node{ .c_node = c_node };
     }
 
@@ -475,6 +487,12 @@ pub const Node = struct {
         }
     }
 
+    pub fn childIteratorNamed(self: *const Self, named: [:0]const u8) NodeIterator {
+        return NodeIteratorNamed{
+            .first = self.child(named),
+        };
+    }
+
     pub fn format(
         self: *const Self,
         comptime fmt: []const u8,
@@ -501,6 +519,21 @@ const NodeIterator = struct {
         }
         const current = self.first;
         self.first = self.first.nextSibling();
+        return current;
+    }
+};
+
+const NodeIteratorNamed = struct {
+    first: Node,
+    const Self = @This();
+
+    pub fn next(self: *Self) ?Node {
+        if (self.first.isEmpty()) {
+            return null;
+        }
+        const current = self.first;
+        const tmpName = current.nameZ();
+        self.first = self.first.nextSiblingNamed(tmpName);
         return current;
     }
 };
@@ -679,7 +712,7 @@ pub const Doc = struct {
         return Node{ .c_node = c_node };
     }
 
-    pub fn child(self: *Self, name: [:0]const u8) Node {
+    pub fn child(self: *const Self, name: [:0]const u8) Node {
         const c_node = c.get_doc_child_named(
             self.c_doc,
             name,
@@ -690,6 +723,15 @@ pub const Doc = struct {
     pub fn childIterator(self: *const Self) NodeIterator {
         return NodeIterator{
             .first = self.firstChild(),
+        };
+    }
+
+    pub fn childIteratorNamed(
+        self: *const Self,
+        named: [:0]const u8,
+    ) NodeIteratorNamed {
+        return NodeIteratorNamed{
+            .first = self.child(named),
         };
     }
 

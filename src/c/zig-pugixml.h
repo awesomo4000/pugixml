@@ -49,6 +49,7 @@ xml_node_t   get_child_named       (xml_node_t node, const char* name);
 xml_node_t   get_first_child       (xml_node_t node);
 xml_node_t   get_last_child        (xml_node_t node);
 xml_node_t   get_next_sibling      (xml_node_t node);
+xml_node_t   next_sibling_named    (xml_node_t node, const char* name);
 xml_node_t   get_previous_sibling  (xml_node_t node);
 bool         node_is_empty         (xml_node_t node);
 int          get_node_type         (xml_node_t node);
