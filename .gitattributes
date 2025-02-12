@@ -1,0 +1,2 @@
+* linguist-vendored
+*.zig linguist-vendored=false
