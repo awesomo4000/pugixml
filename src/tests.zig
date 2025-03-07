@@ -4,10 +4,8 @@ const time = std.time;
 const Instant = time.Instant;
 const Timer = time.Instant;
 const expect = testing.expect;
-const expectError =
-    testing.expectError;
-const expectEqualStrings =
-    testing.expectEqualStrings;
+const expectError = testing.expectError;
+const expectEqualStrings = testing.expectEqualStrings;
 
 const pugixml = @import("pugixml");
 
@@ -16,7 +14,7 @@ const valid_xml =
     \\<Profile FormatVersion="1">
     \\    <Tools>
     \\        <Tool Filename="jam" AllowIntercept="true">
-    \\        	<Description>Jamplus build system</Description>
+    \\            <Description>Jamplus build system</Description>
     \\        </Tool>
     \\        <Tool Filename="mayabatch.exe" AllowRemote="true"
     \\ OutputFileMasks="*.dae" DeriveCaptionFrom="lastparam" Timeout="40" />
