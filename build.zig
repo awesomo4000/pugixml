@@ -163,6 +163,7 @@ pub fn build(b: *std.Build) !void {
         "run tests",
     );
     test_step.dependOn(&run_unit_tests.step);
+
     b.installArtifact(unit_tests);
 
     //
@@ -174,19 +175,15 @@ pub fn build(b: *std.Build) !void {
     );
 
     clean_step.dependOn(
-        &b.addRemoveDirTree(b.install_path).step,
+        &b.addRemoveDirTree(.{ .cwd_relative = b.install_path }).step,
     );
     if (@import("builtin").os.tag != .windows) {
         clean_step.dependOn(
-            &b.addRemoveDirTree(b.pathFromRoot(
-                ".zig-cache",
-            )).step,
+            &b.addRemoveDirTree(b.path(".zig-cache")).step,
         );
 
         clean_step.dependOn(
-            &b.addRemoveDirTree(b.pathFromRoot(
-                "zig-out",
-            )).step,
+            &b.addRemoveDirTree(b.path("zig-out")).step,
         );
     }
 
@@ -239,6 +236,5 @@ fn createTgz(b: *std.Build) *std.Build.Step.Run {
     );
     renameTarGzRun.has_side_effects = true;
     renameTarGzRun.step.dependOn(&gzipRun.step);
-
     return renameTarGzRun;
 }
