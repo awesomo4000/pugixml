@@ -487,7 +487,7 @@ pub const Node = struct {
         }
     }
 
-    pub fn childIteratorNamed(self: *const Self, named: [:0]const u8) NodeIterator {
+    pub fn childIteratorNamed(self: *const Self, named: [:0]const u8) NodeIteratorNamed {
         return NodeIteratorNamed{
             .first = self.child(named),
         };
@@ -691,10 +691,10 @@ pub const Doc = struct {
     ) ParseResult {
         const c_result =
             c.load_buffer_inplace(
-            self.c_doc,
-            source.ptr,
-            source.len,
-        );
+                self.c_doc,
+                source.ptr,
+                source.len,
+            );
         const result = ParseResult.initWith_C_Result(
             c_result,
         );
