@@ -493,6 +493,12 @@ pub const Node = struct {
         };
     }
 
+    pub fn childIterator(self: *const Self) NodeIterator {
+        return NodeIterator{
+            .first = self.firstChild(),
+        };
+    }
+
     pub fn format(
         self: *const Self,
         comptime fmt: []const u8,

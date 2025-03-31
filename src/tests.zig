@@ -230,6 +230,26 @@ test "First and last attribute" {
     try expectEqualStrings("attr 3", n1last.value());
 }
 
+test "Get non-existent attr name" {
+    //std.debug.print("Get non-existent attr name", .{});
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<Node1 attr1="attr 1" attr2="attr 2" attr3="attr 3">
+        \\<Child1 childAttr="child 1" childAttr2="child 2" />
+        \\</Node1>
+    ;
+    var doc: pugixml.Doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    const node1 = doc.firstChild();
+    const notThere: pugixml.Attribute = node1.attribute("notThere");
+    try expectEqualStrings("", notThere.value());
+    //std.debug.print("notThere = '{}','{s}'\n", .{
+    //    @TypeOf(notThere.value()),
+    //    notThere.value(),
+    //});
+}
+
 test "Attribute iterator" {
     const xml =
         \\<?xml version="1.0" encoding="UTF-8" ?>
@@ -263,6 +283,25 @@ test "Attribute iterator" {
     while (iter.next()) |attr| {
         try expect(!attr.isEmpty());
     }
+}
+
+test "test childIterator" {
+    const xml =
+        \\<?xml version="1.0" encoding="UTF-8" ?>
+        \\<parent>
+        \\<child1><a></a></child1>
+        \\<child2></child2>
+        \\<child3 />
+        \\</parent>
+    ;
+    var doc = pugixml.Doc.init();
+    const result = doc.loadString(xml);
+    try expect(result.isOk());
+    const parent = doc.firstChild();
+    var iter = parent.childIterator();
+    try expectEqualStrings("child1", iter.next().?.name());
+    try expectEqualStrings("child2", iter.next().?.name());
+    try expectEqualStrings("child3", iter.next().?.name());
 }
 
 test "test doc childiter / Nodeiterator" {
