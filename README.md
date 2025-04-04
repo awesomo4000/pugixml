@@ -1,4 +1,4 @@
-# Zig wrappers and bindings for the PugiXML C++ parser
+# Zig wrappers for the PugiXML C++ parser
 
 This is a set of wrappers with a nice zig interface to the pugixml C++ xml library.
 
