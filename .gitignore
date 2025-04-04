@@ -1,0 +1,6 @@
+x/
+zig-out/
+.zig-cache/
+.vscode/
+*.tgz
+.DS_Store

@@ -1,0 +1,21 @@
+.{
+    .fingerprint = 0x896281825f3588f5,
+    .name = .pugixml,
+    .version = "0.2.1",
+    .minimum_zig_version = "0.14.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src/pugixml.zig",
+        "src/main.zig",
+        "src/tests.zig",
+        "src/c/zig-pugixml.cpp",
+        "src/c/zig-pugixml.h",
+        "src/c/pugiconfig.hpp",
+        "src/c/pugixml.hpp",
+        "src/c/pugixml.cpp",
+        "test-files/books.xml",
+        "README.md",
+    },
+}
