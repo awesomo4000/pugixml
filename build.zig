@@ -1,18 +1,24 @@
 const std = @import("std");
 const Build = std.Build;
-const StaticLibOptions = Build.StaticLibraryOptions;
-const Compile = Build.Step.Compile;
 
 pub fn build_pugixml_cpplib(
     b: *Build,
-    options: *StaticLibOptions,
-) *Compile {
-    options.name = "pugixml_cpp";
-    defer options.name = undefined;
-    options.link_libc = false;
-    const pugixml_cpplib = b.addStaticLibrary(
-        options.*,
-    );
+    target: Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *Build.Step.Compile {
+    // Create a module for the C++ library (no zig source, just C++)
+    const cpplib_module = b.createModule(.{
+        .root_source_file = null, // No Zig source, only C++
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const pugixml_cpplib = b.addLibrary(.{
+        .name = "pugixml_cpp",
+        .root_module = cpplib_module,
+        .linkage = .static,
+    });
+
     pugixml_cpplib.installHeadersDirectory(
         b.path("src/c"),
         "",
@@ -38,27 +44,12 @@ pub fn build_pugixml_cpplib(
     });
     pugixml_cpplib.linkLibCpp();
     b.installArtifact(pugixml_cpplib);
-    return pugixml_cpplib; // pugixml_cpp static library
+    return pugixml_cpplib;
 }
 
 pub fn build(b: *std.Build) !void {
-    const target = b.standardTargetOptions(
-        .{},
-    );
-    const optimize = b.standardOptimizeOption(
-        .{},
-    );
-
-    const strip = b.option(
-        bool,
-        "strip",
-        "Omit debug information",
-    );
-    const pic = b.option(
-        bool,
-        "pic",
-        "Produce position independent code",
-    );
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
     const test_filters = b.option(
         []const []const u8,
@@ -66,34 +57,24 @@ pub fn build(b: *std.Build) !void {
         "Skip tests that do not match any filter",
     ) orelse &[0][]const u8{};
 
-    var options: StaticLibOptions = .{
-        .name = undefined,
-        .target = target,
-        .optimize = optimize,
-        .pic = pic,
-        .strip = strip,
-        .link_libc = false,
-    };
-
     //
     // pugixml c++ static library
     //
-
     const pugixml_cpplib = build_pugixml_cpplib(
         b,
-        &options,
+        target,
+        optimize,
     );
 
     //
     // Zig module
     //
-
     const pugixml_zig_module = b.addModule(
         "pugixml",
         .{
-            .root_source_file = b.path(
-                "src/pugixml.zig",
-            ),
+            .root_source_file = b.path("src/pugixml.zig"),
+            .target = target,
+            .optimize = optimize,
         },
     );
     pugixml_zig_module.addCSourceFile(
@@ -106,14 +87,15 @@ pub fn build(b: *std.Build) !void {
     //
     // "parse-xml" Executable
     //
-    const parse_exe = b.addExecutable(.{
-        .name = "parse-xml",
+    const parse_exe_module = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .strip = strip,
-        .pic = pic,
-        .link_libc = false,
+    });
+
+    const parse_exe = b.addExecutable(.{
+        .name = "parse-xml",
+        .root_module = parse_exe_module,
     });
 
     // use the zig module built above
@@ -139,13 +121,14 @@ pub fn build(b: *std.Build) !void {
     // Test step
     // Adds "zig build test" to run unit tests
     //
-    const unit_tests = b.addTest(.{
+    const test_module = b.createModule(.{
         .root_source_file = b.path("src/tests.zig"),
         .target = target,
         .optimize = optimize,
-        .strip = strip,
-        .pic = pic,
-        .link_libc = false,
+    });
+
+    const unit_tests = b.addTest(.{
+        .root_module = test_module,
         .filters = test_filters,
     });
 
@@ -153,9 +136,7 @@ pub fn build(b: *std.Build) !void {
         "pugixml",
         pugixml_zig_module,
     );
-    const run_unit_tests = b.addRunArtifact(
-        unit_tests,
-    );
+    const run_unit_tests = b.addRunArtifact(unit_tests);
     // run every time
     run_unit_tests.has_side_effects = true;
     const test_step = b.step(
@@ -214,7 +195,6 @@ fn createTgz(b: *std.Build) *std.Build.Step.Run {
         "pugixml/README.md",
         "pugixml/build.zig",
         "pugixml/build.zig.zon",
-        "pugixml/.zig-version",
         "pugixml/.gitignore",
     });
 
