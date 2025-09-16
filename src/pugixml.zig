@@ -111,12 +111,8 @@ const ParseResult = struct {
 
     pub fn format(
         self: *const Self,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = fmt;
-        _ = options;
         try writer.print(
             \\{s}(status="{}","{s}",offset={d})"
         , .{
@@ -206,12 +202,8 @@ pub const Attribute = struct {
 
     pub fn format(
         self: *const Self,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = fmt;
-        _ = options;
         try writer.print(
             "{s}(name=\"{s}\",value=\"{?s}\" {?s}",
             .{
@@ -501,12 +493,8 @@ pub const Node = struct {
 
     pub fn format(
         self: *const Self,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = fmt;
-        _ = options;
         try writer.print("{s}(name=\"{s}\",c_node={?s})", .{
             @typeName(Self),
             self.name(),
@@ -567,17 +555,14 @@ pub const ContextDetail = struct {
     const Self = @This();
     pub fn format(
         self: *const Self,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = fmt;
-        _ = options;
 
-        try writer.print(
-            "{s}\n{s: >[3]}^--[{d}]",
-            .{ self.context, "", self.offset, self.contextOffset },
-        );
+        try writer.print("{s}\n", .{self.context});
+        for (0..self.contextOffset) |_| {
+            try writer.writeByte(' ');
+        }
+        try writer.print("^--[{d}]", .{self.offset});
     }
 };
 
