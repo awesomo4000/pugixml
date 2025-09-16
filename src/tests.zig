@@ -717,7 +717,7 @@ test "load invalid doc and get an error result" {
     var mem = [_:0]u8{0} ** 256; // This should hold contextLength*2
     const buf = mem[0..];
 
-    _ = try std.fmt.bufPrint(buf, "{ContextDetail}\n", .{detail});
+    _ = try std.fmt.bufPrint(buf, "{f}\n", .{detail});
     // std.debug.print("buf.len={d}\n", .{buf.len});
     // std.debug.print("{s}\n", .{buf});
 
