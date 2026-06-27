@@ -126,16 +126,20 @@ test "loadBufferInplace ParseResult.ok" {
 }
 
 test "loadBufferInplace using file ParseResult.ok" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer if (gpa.deinit() == .leak) {
         std.debug.panic("leak detected", .{});
     };
     const allocator = gpa.allocator();
     const filename = "test-files/books.xml";
-    const buffer = try std.fs.cwd().readFileAlloc(
-        allocator,
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+    const buffer = try std.Io.Dir.cwd().readFileAlloc(
+        io,
         filename,
-        std.math.maxInt(usize),
+        allocator,
+        .unlimited,
     );
     var doc = pugixml.Doc.init();
     defer doc.deinit();

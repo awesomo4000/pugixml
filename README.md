@@ -55,7 +55,7 @@ For more examples of using the module, look at the tests in
 
 ## Building:
 
-Use version 0.15.1 of Zig to build.
+Use version 0.16.0 of Zig to build.
 
 Primary Development is on a MacBook M4 Pro (aarch64) running 
 macOS Sequoia (15.2).

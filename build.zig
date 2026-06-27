@@ -11,6 +11,7 @@ pub fn build_pugixml_cpplib(
         .root_source_file = null, // No Zig source, only C++
         .target = target,
         .optimize = optimize,
+        .link_libcpp = true,
     });
 
     const pugixml_cpplib = b.addLibrary(.{
@@ -31,7 +32,7 @@ pub fn build_pugixml_cpplib(
             },
         },
     );
-    pugixml_cpplib.addCSourceFiles(.{
+    cpplib_module.addCSourceFiles(.{
         .root = b.path("src/c"),
         .files = &.{"pugixml.cpp"},
         .flags = &.{
@@ -42,7 +43,6 @@ pub fn build_pugixml_cpplib(
             "-DPUGIXML_MEMORY_PAGE_SIZE=131072",
         },
     });
-    pugixml_cpplib.linkLibCpp();
     b.installArtifact(pugixml_cpplib);
     return pugixml_cpplib;
 }
@@ -155,17 +155,17 @@ pub fn build(b: *std.Build) !void {
         "Clean up",
     );
 
-    clean_step.dependOn(
-        &b.addRemoveDirTree(.{ .cwd_relative = b.install_path }).step,
-    );
     if (@import("builtin").os.tag != .windows) {
-        clean_step.dependOn(
-            &b.addRemoveDirTree(b.path(".zig-cache")).step,
-        );
-
-        clean_step.dependOn(
-            &b.addRemoveDirTree(b.path("zig-out")).step,
-        );
+        const clean_paths = [_][]const u8{
+            b.install_path,
+            ".zig-cache",
+            "zig-out",
+        };
+        for (clean_paths) |path| {
+            const rm = b.addSystemCommand(&.{ "rm", "-rf", path });
+            rm.has_side_effects = true;
+            clean_step.dependOn(&rm.step);
+        }
     }
 
     // Create source gzipped tarball
