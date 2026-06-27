@@ -17,5 +17,6 @@
         "src/c/pugixml.cpp",
         "test-files/books.xml",
         "README.md",
+        "LICENSE",
     },
 }
