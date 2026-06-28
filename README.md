@@ -6,7 +6,7 @@ copying of the data (using pointers). It is one of the fastest
 XML parsers available. XML files must fit in memory with an 
 overhead of about 25%.
 
-The code for pugixml C++ (currently v1.15) is included  in 
+The code for pugixml C++ (currently v1.16) is included  in 
 this repo in the `src/c/pugi*.[ch]pp` files. The zig c->cpp 
 interface to the library files are in `src/c/zig-pugixml.cpp` 
 and `src/c/zig-pugixml.h`.
