@@ -1,7 +1,7 @@
 .{
     .fingerprint = 0x896281825f3588f5,
     .name = .pugixml,
-    .version = "0.5.0",
+    .version = "0.6.0",
     .minimum_zig_version = "0.16.0",
     .dependencies = .{},
     .paths = .{

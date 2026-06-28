@@ -10,14 +10,15 @@ struct         xml_document;
 typedef struct xml_document* xml_doc_t;
 struct         xml_parse_result;
 typedef struct xml_parse_result* xml_result_t;
-struct         xml_node;
-typedef struct xml_node* xml_node_t;
-struct         xml_attribute;
-typedef struct xml_attribute* xml_attr_t;
-struct         xml_text;
-typedef struct xml_text* xml_text_t;
 struct         xml_tree_walker;
 typedef struct xml_tree_walker* xml_tree_walker_t;
+
+// Node/attribute/text handles are pointer-sized value types that mirror the
+// underlying pugixml objects (each is just a single pointer). They are passed
+// and returned by value, so traversing the DOM performs no heap allocation.
+typedef struct xml_node_handle { void* _h; } xml_node_t;
+typedef struct xml_attr_handle { void* _h; } xml_attr_t;
+typedef struct xml_text_handle { void* _h; } xml_text_t;
 
 xml_doc_t    new_xml_doc           (void);
 xml_result_t new_xml_parse_result  (void);
@@ -26,11 +27,8 @@ xml_attr_t   new_xml_attr          (void);
 xml_text_t   new_xml_text          (void);
 void         free_xml_doc          (xml_doc_t doc);
 void         free_xml_parse_result (xml_result_t result);
-void         free_xml_node         (xml_node_t node);
-void         free_xml_attr         (xml_attr_t attr);
-void         free_xml_text         (xml_text_t text);
 xml_node_t   doc_to_node           (xml_doc_t doc);
-xml_result_t load_buffer           (xml_doc_t doc, const char* source, 
+xml_result_t load_buffer           (xml_doc_t doc, const char* source,
                                                           size_t size);
 xml_result_t load_buffer_fragment  (xml_doc_t doc, const char* source,
                                                           size_t size);
@@ -61,7 +59,7 @@ bool         attrs_eql             (xml_attr_t a, xml_attr_t b);
 xml_attr_t   get_attr_by_name      (xml_node_t node, const char* name);
 const char*  get_attr_name         (xml_attr_t attr);
 xml_attr_t   get_first_attr        (xml_node_t node);
-xml_attr_t   get_last_attr         (xml_node_t node); 
+xml_attr_t   get_last_attr         (xml_node_t node);
 xml_attr_t   get_next_attr         (xml_attr_t attr);
 xml_attr_t   get_previous_attr     (xml_attr_t attr);
 bool         attr_is_empty         (xml_attr_t attr);
