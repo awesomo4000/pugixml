@@ -125,11 +125,11 @@ const ParseResult = struct {
 };
 
 const Text = struct {
-    c_text: ?*c.xml_text,
+    c_text: c.xml_text_t,
 
     const Self = @This();
 
-    pub fn initWith_C_Text(c_text: ?*c.xml_text) Self {
+    pub fn initWith_C_Text(c_text: c.xml_text_t) Self {
         return Self{ .c_text = c_text };
     }
 
@@ -153,7 +153,7 @@ const Text = struct {
 };
 
 pub const Attribute = struct {
-    c_attr: ?*c.xml_attribute,
+    c_attr: c.xml_attr_t,
     const Self = @This();
 
     pub fn eql(self: Self, other: Self) bool {
@@ -205,19 +205,18 @@ pub const Attribute = struct {
         writer: anytype,
     ) !void {
         try writer.print(
-            "{s}(name=\"{s}\",value=\"{?s}\" {?s}",
+            "{s}(name=\"{s}\",value=\"{s}\")",
             .{
                 @typeName(Self),
                 self.name(),
                 self.value(),
-                self.c_attr,
             },
         );
     }
 };
 
 pub const Node = struct {
-    c_node: ?*c.xml_node,
+    c_node: c.xml_node_t,
     //c_node: NodeOrDoc,
 
     const Self = @This();
@@ -228,7 +227,7 @@ pub const Node = struct {
         return Self{ .c_node = c.new_xml_node() };
     }
 
-    pub fn initWith_C_Node(c_node: ?*c.xml_node) Self {
+    pub fn initWith_C_Node(c_node: c.xml_node_t) Self {
         return Self{ .c_node = c_node };
     }
 
@@ -474,9 +473,8 @@ pub const Node = struct {
     }
 
     pub fn deinit(self: *Self) void {
-        if (self.c_node) |node| {
-            c.free_xml_node(node);
-        }
+        // Value handles do not own any heap memory; nothing to free.
+        _ = self;
     }
 
     pub fn childIteratorNamed(self: *const Self, named: [:0]const u8) NodeIteratorNamed {
@@ -495,10 +493,9 @@ pub const Node = struct {
         self: *const Self,
         writer: anytype,
     ) !void {
-        try writer.print("{s}(name=\"{s}\",c_node={?s})", .{
+        try writer.print("{s}(name=\"{s}\")", .{
             @typeName(Self),
             self.name(),
-            self.c_node,
         });
     }
 };
