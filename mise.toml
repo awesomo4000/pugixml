@@ -1,19 +1,28 @@
 [tools]
 zig = "0.17.0"
 
+# With `mise activate` in the shell, entering the repo runs setup, so the
+# pre-push hook is in place before any git use. Tasks also depend on it.
+[hooks]
+enter = "{{config_root}}/tools/setup.sh"
+
 [tasks.build]
+depends = ["setup"]
 description = "Build the pugixml C++ library, the Zig module and parse-xml"
 run = "zig build"
 
 [tasks.release]
+depends = ["setup"]
 description = "Optimized build (default fast; RELEASE=safe|small to change)"
 run = "zig build --release=${RELEASE:-fast}"
 
 [tasks.test]
+depends = ["setup"]
 description = "Run unit tests"
 run = "zig build test --summary new"
 
 [tasks."test:release"]
+depends = ["setup"]
 description = "Run unit tests in every release mode"
 run = [
   "zig build test --release=safe",
@@ -22,14 +31,17 @@ run = [
 ]
 
 [tasks.run]
+depends = ["setup"]
 description = "Parse an XML file and report elapsed time (usage: mise run run -- FILE)"
 run = "zig build run --"
 
 [tasks.fmt]
+depends = ["setup"]
 description = "Format Zig sources"
 run = "zig fmt build.zig src"
 
 [tasks.check]
+depends = ["setup"]
 description = "Check formatting, build, and run tests"
 run = [
   "zig fmt --check build.zig src",
@@ -38,17 +50,21 @@ run = [
 ]
 
 [tasks.clean]
+depends = ["setup"]
 description = "Remove build outputs and caches"
 run = "rm -rf zig-out .zig-cache pugixml.tgz"
 
 [tasks.tgz]
+depends = ["setup"]
 description = "Make pugixml.tgz from the committed sources"
 run = "git archive --format=tar.gz --prefix=pugixml/ -o pugixml.tgz HEAD build.zig build.zig.zon src test-files README.md LICENSE .gitignore"
 
 [tasks.setup]
-description = "Install the pre-push hook that guards the public remote"
-run = "git config core.hooksPath tools/hooks"
+description = "Install the pre-push hook that guards the public remote (every task runs this first)"
+run = "tools/setup.sh"
+quiet = true
 
 [tasks."push:github"]
+depends = ["setup"]
 description = "Publish main to the public GitHub repo under the public identity"
 run = "tools/push-github.sh"

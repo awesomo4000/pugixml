@@ -61,6 +61,7 @@ the Zig version:
 
 ```
 mise install          # fetch the pinned Zig
+mise run setup        # install git hooks (every task does this first)
 mise run build        # zig build
 mise run test         # zig build test
 mise run check        # fmt check, build, test

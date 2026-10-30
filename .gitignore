@@ -5,3 +5,4 @@ zig-out/
 *.tgz
 .DS_Store
 zig-pkg/
+.mise-setup
