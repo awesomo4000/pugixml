@@ -39,11 +39,12 @@ fi
 parent=$public_tip
 for c in $commits; do
     parent=$(
-        GIT_AUTHOR_NAME="$PUBLIC_NAME" GIT_AUTHOR_EMAIL="$PUBLIC_EMAIL" \
-        GIT_AUTHOR_DATE="$(git log -1 --format=%ad --date=raw "$c")" \
-        GIT_COMMITTER_NAME="$PUBLIC_NAME" GIT_COMMITTER_EMAIL="$PUBLIC_EMAIL" \
-        GIT_COMMITTER_DATE="$(git log -1 --format=%cd --date=raw "$c")" \
-        git log -1 --format=%B "$c" | git commit-tree "$c^{tree}" -p "$parent"
+        git log -1 --format=%B "$c" |
+            GIT_AUTHOR_NAME="$PUBLIC_NAME" GIT_AUTHOR_EMAIL="$PUBLIC_EMAIL" \
+            GIT_AUTHOR_DATE="$(git log -1 --format=%ad --date=raw "$c")" \
+            GIT_COMMITTER_NAME="$PUBLIC_NAME" GIT_COMMITTER_EMAIL="$PUBLIC_EMAIL" \
+            GIT_COMMITTER_DATE="$(git log -1 --format=%cd --date=raw "$c")" \
+            git commit-tree "$c^{tree}" -p "$parent"
     )
     git log -1 --format="%h %s" "$parent"
 done
