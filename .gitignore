@@ -4,3 +4,4 @@ zig-out/
 .vscode/
 *.tgz
 .DS_Store
+zig-pkg/

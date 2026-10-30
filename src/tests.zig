@@ -126,8 +126,8 @@ test "loadBufferInplace ParseResult.ok" {
 }
 
 test "loadBufferInplace using file ParseResult.ok" {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) {
+    var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+    defer if (gpa.deinit() != 0) {
         std.debug.panic("leak detected", .{});
     };
     const allocator = gpa.allocator();
@@ -341,7 +341,7 @@ test "test doc childiter / Nodeiterator" {
     // Use iterator in a while loop
 
     while (iter.next()) |ichild| : (count += 1) {
-        const childName = try std.fmt.bufPrint(
+        const childName = try std.mem.print(
             &buf,
             "child{d}",
             .{count},
@@ -718,10 +718,10 @@ test "load invalid doc and get an error result" {
         64,
     );
     // std.debug.print("{ContextDetail}\n", .{detail});
-    var mem = [_:0]u8{0} ** 256; // This should hold contextLength*2
+    var mem: [256:0]u8 = @splat(0); // This should hold contextLength*2
     const buf = mem[0..];
 
-    _ = try std.fmt.bufPrint(buf, "{f}\n", .{detail});
+    _ = try std.mem.print(buf, "{f}\n", .{detail});
     // std.debug.print("buf.len={d}\n", .{buf.len});
     // std.debug.print("{s}\n", .{buf});
 

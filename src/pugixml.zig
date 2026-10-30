@@ -1,9 +1,7 @@
 // zig wrapper library for using pugixml C++
 //
 const std = @import("std");
-const c = @cImport({
-    @cInclude("zig-pugixml.h");
-});
+const c = @import("c");
 
 pub const NodeType = enum(u32) {
     node_null = 0, // Empty (null) node handle
@@ -73,7 +71,7 @@ const ParseResult = struct {
         result: ?*c.xml_parse_result,
     ) ParseResult {
         return Self{
-            .status = @enumFromInt(c.get_status(result)),
+            .status = @fromBackingInt(@intCast(c.get_status(result))),
             .description = c.get_description(result),
             .offset = c.get_offset(result),
         };
@@ -258,7 +256,7 @@ pub const Node = struct {
     }
 
     pub fn getType(self: *const Self) NodeType {
-        return @enumFromInt(c.get_node_type(self.c_node));
+        return @fromBackingInt(@intCast(c.get_node_type(self.c_node)));
     }
 
     pub fn attribute(
@@ -554,7 +552,6 @@ pub const ContextDetail = struct {
         self: *const Self,
         writer: anytype,
     ) !void {
-
         try writer.print("{s}\n", .{self.context});
         for (0..self.contextOffset) |_| {
             try writer.writeByte(' ');

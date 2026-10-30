@@ -1,10 +1,11 @@
 const std = @import("std");
 const Build = std.Build;
+const Translator = @import("translate_c").Translator;
 
 pub fn build_pugixml_cpplib(
     b: *Build,
     target: Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) *Build.Step.Compile {
     // Create a module for the C++ library (no zig source, just C++)
     const cpplib_module = b.createModule(.{
@@ -77,6 +78,14 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         },
     );
+    // C interface to the C++ wrapper, imported as @import("c")
+    const translate_c = b.dependency("translate_c", .{});
+    const c_header: Translator = .init(translate_c, .{
+        .c_source_file = b.path("src/c/zig-pugixml.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    pugixml_zig_module.addImport("c", c_header.mod);
     pugixml_zig_module.addCSourceFile(
         .{ .file = b.path("src/c/zig-pugixml.cpp") },
     );
@@ -111,9 +120,7 @@ pub fn build(b: *std.Build) !void {
         "run",
         "run parse-xml",
     );
-    if (b.args) |args| {
-        run_parse_exe.addArgs(args);
-    }
+    run_parse_exe.addPassthruArgs();
     run_parse_exe_step.dependOn(&run_parse_exe.step);
     run_parse_exe_step.dependOn(b.getInstallStep());
 
@@ -146,75 +153,4 @@ pub fn build(b: *std.Build) !void {
     test_step.dependOn(&run_unit_tests.step);
 
     b.installArtifact(unit_tests);
-
-    //
-    // clean step
-    //
-    const clean_step = b.step(
-        "clean",
-        "Clean up",
-    );
-
-    if (@import("builtin").os.tag != .windows) {
-        const clean_paths = [_][]const u8{
-            b.install_path,
-            ".zig-cache",
-            "zig-out",
-        };
-        for (clean_paths) |path| {
-            const rm = b.addSystemCommand(&.{ "rm", "-rf", path });
-            rm.has_side_effects = true;
-            clean_step.dependOn(&rm.step);
-        }
-    }
-
-    // Create source gzipped tarball
-    const createTgzRun = createTgz(b);
-    const runTarballStep = b.step(
-        "tgz",
-        "Make tgz from sources",
-    );
-    runTarballStep.dependOn(&createTgzRun.step);
-}
-
-fn createTgz(b: *std.Build) *std.Build.Step.Run {
-    const tarRun = b.addSystemCommand(&.{
-        "tar",
-        "-C",
-        "..",
-        "-cf",
-        "pugixml.tar",
-        "pugixml/src/c/pugiconfig.hpp",
-        "pugixml/src/c/pugixml.cpp",
-        "pugixml/src/c/pugixml.hpp",
-        "pugixml/src/c/zig-pugixml.cpp",
-        "pugixml/src/c/zig-pugixml.h",
-        "pugixml/src/main.zig",
-        "pugixml/src/pugixml.zig",
-        "pugixml/src/tests.zig",
-        "pugixml/README.md",
-        "pugixml/build.zig",
-        "pugixml/build.zig.zon",
-        "pugixml/.gitignore",
-    });
-
-    tarRun.has_side_effects = true;
-    const gzipRun = b.addSystemCommand(&.{
-        "gzip",
-        "pugixml.tar",
-    });
-
-    gzipRun.has_side_effects = true;
-    gzipRun.step.dependOn(&tarRun.step);
-
-    const renameTarGzRun = b.addSystemCommand(
-        &.{
-            "mv",
-            "pugixml.tar.gz",
-            "pugixml.tgz",
-        },
-    );
-    renameTarGzRun.has_side_effects = true;
-    renameTarGzRun.step.dependOn(&gzipRun.step);
-    return renameTarGzRun;
 }

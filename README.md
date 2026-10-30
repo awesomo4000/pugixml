@@ -55,7 +55,24 @@ For more examples of using the module, look at the tests in
 
 ## Building:
 
-Use version 0.16.0 of Zig to build.
+Builds with Zig 0.17.0. The toolchain and the common commands
+are managed with [mise](https://mise.jdx.dev); `mise.toml` pins
+the Zig version:
+
+```
+mise install          # fetch the pinned Zig
+mise run build        # zig build
+mise run test         # zig build test
+mise run check        # fmt check, build, test
+mise run release      # zig build --release=fast (RELEASE=safe|small)
+mise run run -- FILE  # parse FILE with parse-xml
+mise run clean        # remove zig-out, .zig-cache and pugixml.tgz
+mise run tgz          # pugixml.tgz from the committed sources
+mise tasks            # list every task
+```
+
+Plain `zig build` commands work too, as long as Zig 0.17.0 is
+on the PATH (mise puts it there inside this directory).
 
 Primary Development is on a MacBook M4 Pro (aarch64) running 
 macOS Sequoia (15.2).
@@ -134,8 +151,6 @@ Steps:
   uninstall                    Remove build artifacts from prefix path
   run                          run parse-xml
   test                         run tests
-  clean                        Clean up
-  tarball                      Make tarball from sources
 
 ...
 

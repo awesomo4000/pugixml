@@ -1,0 +1,46 @@
+[tools]
+zig = "0.17.0"
+
+[tasks.build]
+description = "Build the pugixml C++ library, the Zig module and parse-xml"
+run = "zig build"
+
+[tasks.release]
+description = "Optimized build (default fast; RELEASE=safe|small to change)"
+run = "zig build --release=${RELEASE:-fast}"
+
+[tasks.test]
+description = "Run unit tests"
+run = "zig build test --summary new"
+
+[tasks."test:release"]
+description = "Run unit tests in every release mode"
+run = [
+  "zig build test --release=safe",
+  "zig build test --release=fast",
+  "zig build test --release=small",
+]
+
+[tasks.run]
+description = "Parse an XML file and report elapsed time (usage: mise run run -- FILE)"
+run = "zig build run --"
+
+[tasks.fmt]
+description = "Format Zig sources"
+run = "zig fmt build.zig src"
+
+[tasks.check]
+description = "Check formatting, build, and run tests"
+run = [
+  "zig fmt --check build.zig src",
+  "zig build --cache-poison=disallowed",
+  "zig build test",
+]
+
+[tasks.clean]
+description = "Remove build outputs and caches"
+run = "rm -rf zig-out .zig-cache pugixml.tgz"
+
+[tasks.tgz]
+description = "Make pugixml.tgz from the committed sources"
+run = "git archive --format=tar.gz --prefix=pugixml/ -o pugixml.tgz HEAD build.zig build.zig.zon src test-files README.md LICENSE .gitignore"
