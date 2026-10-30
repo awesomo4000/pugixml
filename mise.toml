@@ -44,3 +44,11 @@ run = "rm -rf zig-out .zig-cache pugixml.tgz"
 [tasks.tgz]
 description = "Make pugixml.tgz from the committed sources"
 run = "git archive --format=tar.gz --prefix=pugixml/ -o pugixml.tgz HEAD build.zig build.zig.zon src test-files README.md LICENSE .gitignore"
+
+[tasks.setup]
+description = "Install the pre-push hook that guards the public remote"
+run = "git config core.hooksPath tools/hooks"
+
+[tasks."push:github"]
+description = "Publish main to the public GitHub repo under the public identity"
+run = "tools/push-github.sh"

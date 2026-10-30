@@ -1,0 +1,58 @@
+#!/bin/sh
+# Refuse to push anything to github.com unless every new commit and tag
+# carries an allowed identity (see tools/public-identity.sh).
+# Installed with: mise run setup
+set -eu
+
+remote_name="$1"
+remote_url="$2"
+case "$remote_url" in
+    *@github.com:* | *://github.com/* | *://*@github.com/*) ;;
+    *) exit 0 ;;
+esac
+
+. "$(git rev-parse --show-toplevel)/tools/public-identity.sh"
+
+zero=0000000000000000000000000000000000000000
+bad=0
+
+allowed() {
+    for ok in $PUBLIC_ALLOWED_EMAILS; do
+        [ "$1" = "$ok" ] && return 0
+    done
+    return 1
+}
+
+while read -r local_ref local_sha _remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue # deleting a ref
+
+    # annotated tag: check the tagger
+    if [ "$(git cat-file -t "$local_sha")" = tag ]; then
+        tagger=$(git for-each-ref --format='%(taggeremail:trim)' "$local_ref")
+        if ! allowed "$tagger"; then
+            echo "pre-push: tag $local_ref has tagger $tagger" >&2
+            bad=1
+        fi
+    fi
+
+    if [ "$remote_sha" = "$zero" ] || ! git cat-file -e "$remote_sha" 2>/dev/null; then
+        range="$local_sha --not --remotes=$remote_name"
+    else
+        range="$remote_sha..$local_sha"
+    fi
+
+    # shellcheck disable=SC2086
+    for c in $(git rev-list $range); do
+        for e in $(git log -1 --format='%ae %ce' "$c"); do
+            if ! allowed "$e"; then
+                echo "pre-push: $(git log -1 --format='%h %s' "$c") has $e" >&2
+                bad=1
+            fi
+        done
+    done
+done
+
+if [ "$bad" -ne 0 ]; then
+    echo "pre-push: refusing push to $remote_url; use: mise run push:github" >&2
+    exit 1
+fi
