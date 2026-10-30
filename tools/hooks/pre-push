@@ -28,7 +28,7 @@ while read -r local_ref local_sha _remote_ref remote_sha; do
 
     # annotated tag: check the tagger
     if [ "$(git cat-file -t "$local_sha")" = tag ]; then
-        tagger=$(git for-each-ref --format='%(taggeremail:trim)' "$local_ref")
+        tagger=$(git cat-file tag "$local_sha" | sed -n 's/^tagger .*<\(.*\)>.*/\1/p')
         if ! allowed "$tagger"; then
             echo "pre-push: tag $local_ref has tagger $tagger" >&2
             bad=1

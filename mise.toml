@@ -68,3 +68,8 @@ quiet = true
 depends = ["setup"]
 description = "Publish main to the public GitHub repo under the public identity"
 run = "tools/push-github.sh"
+
+[tasks."tag:github"]
+depends = ["setup"]
+description = "Publish an annotated tag to the public GitHub repo under the public identity (usage: mise run tag:github -- vX.Y.Z)"
+run = "tools/tag-github.sh"
