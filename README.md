@@ -75,6 +75,8 @@ mise tasks            # list every task
 Plain `zig build` commands work too, as long as Zig 0.17.0 is
 on the PATH (mise puts it there inside this directory).
 
+Pushing, publishing and releasing: see `RELEASING.md`.
+
 Primary Development is on a MacBook M4 Pro (aarch64) running 
 macOS Sequoia (15.2).
 
